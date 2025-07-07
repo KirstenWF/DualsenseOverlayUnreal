@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2025 Rafael Valoto/Publisher. All rights reserved.
+// Copyright (c) 2025 Rafael Valoto/Publisher. All rights reserved.
 // Created for: FPSOnScreenControllerOverlay - Plugin to widget overlay DualSense devices
 // Planned Release Year: 2025
 
@@ -91,7 +91,7 @@ void UBaseInputWidget::HandleGamepadButtonPressed(const FKey PressedKey, bool bI
 
 void UBaseInputWidget::HandleGamepadAnalogLeft2D(const FKey& Key, const float AnalogValue)
 {
-	FVector2D LeftStickOffset;
+	FVector2D LeftStickOffset = FVector2D();
 	if (Key == EKeys::Gamepad_LeftX)
 	{
 		LeftStickOffset.X = -AnalogValue * -1.f;
@@ -118,8 +118,7 @@ void UBaseInputWidget::HandleGamepadAnalogLeft2D(const FKey& Key, const float An
 
 void UBaseInputWidget::HandleGamepadAnalogRight2D(const FKey& Key, const float AnalogValue)
 {
-
-	FVector2D RightStickOffset;
+	FVector2D RightStickOffset = FVector2D();
 	if (Key == EKeys::Gamepad_RightX)
 	{
 		RightStickOffset.X = -AnalogValue * -1.f;
