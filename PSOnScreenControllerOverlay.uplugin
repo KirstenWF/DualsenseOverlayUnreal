@@ -10,10 +10,9 @@
 	"Category": "UI",
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
-	"Installed": true,
-	"EngineVersion": "5.2.0",
+	"Installed": false,
 	"CanContainContent": true,
-	"EnabledByDefault": false,
+	"EnabledByDefault": true,
 	"Modules": [
 		{
 			"Name": "PSOnScreenControllerOverlay",
