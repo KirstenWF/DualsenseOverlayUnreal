@@ -47,8 +47,8 @@ Opacity and position alignment
 
 ![Blueprint](Images/ConnectionIconAling.png)
 
-
 ![Blueprint](Images/OpacityAndPosition.png)
+
 ![Blueprint](Images/Position%20Connection%20Type.png)
 
 Connection Type Icon
