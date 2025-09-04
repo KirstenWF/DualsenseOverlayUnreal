@@ -4,15 +4,17 @@
 
 
 #include "Application/BaseInputWidget.h"
+
+#include "Channels/MovieSceneChannelTraits.h"
 #include "Engine/Texture2D.h"
 
 void UBaseInputWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
 	SetIsFocusable(true);
-	SetFocus();
-	SetKeyboardFocus();
+	
+	SetUserFocus(GetOwningPlayer());
+	SetVisibility(ESlateVisibility::Visible);
 	if (bEnableDebugLogs_Gamepad)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Widget BaseInputWidget inicializado!"));
@@ -22,40 +24,29 @@ void UBaseInputWidget::NativeOnInitialized()
 FReply UBaseInputWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey PressedKey = InKeyEvent.GetKey(); 
-	if (!PressedKey.IsGamepadKey())
+	if (PressedKey.IsGamepadKey())
 	{
-		SetFocus();
-		SetKeyboardFocus();
-		return FReply::Unhandled();
+		HandleGamepadButtonPressed(PressedKey, true);
 	}
 
-	HandleGamepadButtonPressed(PressedKey, true);
-	return FReply::Unhandled();
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 FReply UBaseInputWidget::NativeOnKeyUp(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey PressedKey = InKeyEvent.GetKey(); 
-	if (!PressedKey.IsGamepadKey())
+	if (PressedKey.IsGamepadKey())
 	{
-		SetFocus();
-		SetKeyboardFocus();
-		return FReply::Unhandled();
+		HandleGamepadButtonPressed(PressedKey, false);
 	}
 
-	HandleGamepadButtonPressed(PressedKey, false);
-	return FReply::Unhandled();
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 FReply UBaseInputWidget::NativeOnAnalogValueChanged(const FGeometry& InGeometry, const FAnalogInputEvent& InAnalogEvent)
 {
 	const FKey Key = InAnalogEvent.GetKey();
 	const float AnalogValue = InAnalogEvent.GetAnalogValue();
-
-	if (Key.IsGamepadKey() == false)
-	{
-		return FReply::Unhandled();
-	}
 	
 	if (Key == EKeys::Gamepad_LeftX || Key == EKeys::Gamepad_LeftY)
 	{
@@ -77,7 +68,7 @@ FReply UBaseInputWidget::NativeOnAnalogValueChanged(const FGeometry& InGeometry,
 		RenderGamepadRightTrigger = AnalogValue;
 	}
 	
-	return FReply::Unhandled();
+	return Super::NativeOnAnalogValueChanged(InGeometry, InAnalogEvent);
 }
 
 void UBaseInputWidget::HandleGamepadButtonPressed(const FKey PressedKey, bool bIsPressed)
