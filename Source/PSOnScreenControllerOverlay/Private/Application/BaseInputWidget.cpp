@@ -1,18 +1,20 @@
-// Copyright (c) 2025 Rafael Valoto/Publisher. All rights reserved.
+﻿// Copyright (c) 2025 Rafael Valoto/Publisher. All rights reserved.
 // Created for: FPSOnScreenControllerOverlay - Plugin to widget overlay DualSense devices
 // Planned Release Year: 2025
 
 
 #include "Application/BaseInputWidget.h"
+
+#include "Channels/MovieSceneChannelTraits.h"
 #include "Engine/Texture2D.h"
 
 void UBaseInputWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
 	SetIsFocusable(true);
-	SetFocus();
-	SetKeyboardFocus();
+	
+	SetUserFocus(GetOwningPlayer());
+	SetVisibility(ESlateVisibility::Visible);
 	if (bEnableDebugLogs_Gamepad)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Widget BaseInputWidget inicializado!"));
@@ -22,40 +24,29 @@ void UBaseInputWidget::NativeOnInitialized()
 FReply UBaseInputWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey PressedKey = InKeyEvent.GetKey(); 
-	if (!PressedKey.IsGamepadKey())
+	if (PressedKey.IsGamepadKey())
 	{
-		SetFocus();
-		SetKeyboardFocus();
-		return FReply::Unhandled();
+		HandleGamepadButtonPressed(PressedKey, true);
 	}
 
-	HandleGamepadButtonPressed(PressedKey, true);
-	return FReply::Unhandled();
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 FReply UBaseInputWidget::NativeOnKeyUp(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey PressedKey = InKeyEvent.GetKey(); 
-	if (!PressedKey.IsGamepadKey())
+	if (PressedKey.IsGamepadKey())
 	{
-		SetFocus();
-		SetKeyboardFocus();
-		return FReply::Unhandled();
+		HandleGamepadButtonPressed(PressedKey, false);
 	}
 
-	HandleGamepadButtonPressed(PressedKey, false);
-	return FReply::Unhandled();
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 FReply UBaseInputWidget::NativeOnAnalogValueChanged(const FGeometry& InGeometry, const FAnalogInputEvent& InAnalogEvent)
 {
 	const FKey Key = InAnalogEvent.GetKey();
 	const float AnalogValue = InAnalogEvent.GetAnalogValue();
-
-	if (Key.IsGamepadKey() == false)
-	{
-		return FReply::Unhandled();
-	}
 	
 	if (Key == EKeys::Gamepad_LeftX || Key == EKeys::Gamepad_LeftY)
 	{
@@ -77,7 +68,7 @@ FReply UBaseInputWidget::NativeOnAnalogValueChanged(const FGeometry& InGeometry,
 		RenderGamepadRightTrigger = AnalogValue;
 	}
 	
-	return FReply::Unhandled();
+	return Super::NativeOnAnalogValueChanged(InGeometry, InAnalogEvent);
 }
 
 void UBaseInputWidget::HandleGamepadButtonPressed(const FKey PressedKey, bool bIsPressed)
@@ -91,56 +82,46 @@ void UBaseInputWidget::HandleGamepadButtonPressed(const FKey PressedKey, bool bI
 
 void UBaseInputWidget::HandleGamepadAnalogLeft2D(const FKey& Key, const float AnalogValue)
 {
-	FVector2D LeftStickOffset = FVector2D();
 	if (Key == EKeys::Gamepad_LeftX)
 	{
-		LeftStickOffset.X = -AnalogValue * -1.f;
+		AnalogAccLeft.X += -AnalogValue * -1.f;
 	}
 	
 	if (Key == EKeys::Gamepad_LeftY)
 	{
-		LeftStickOffset.Y = AnalogValue * -1.f;
+		AnalogAccLeft.Y += AnalogValue * -1.f;
 	}
 
-	const float DeadZone = 0.02f;
-	if (FMath::Abs(LeftStickOffset.X) < DeadZone && FMath::Abs(LeftStickOffset.Y) < DeadZone)
+	PollAccumulatorLeft += GetWorld()->GetDeltaSeconds();
+	if (PollAccumulatorLeft < 0.066f)
 	{
-		RenderGamepadAnalogLeft2D = FVector2D::ZeroVector;
 		return;
 	}
-
-	float DeltaTime = GetWorld()->GetDeltaSeconds();
-	const float InterpSpeed = 80.0f; // Controla a velocidade da interpolação
-	FVector2D TargetValue = RenderGamepadAnalogLeft2D; // Valor final que você quer atingir
-	FVector2D SmoothedValue = FMath::Vector2DInterpTo(LeftStickOffset, TargetValue, DeltaTime, InterpSpeed);
-	RenderGamepadAnalogLeft2D = SmoothedValue * 1.f;
+	PollAccumulatorLeft = 0;
+	RenderGamepadAnalogLeft2D = FMath::Vector2DInterpTo(AnalogAccLeft, RenderGamepadAnalogLeft2D, GetWorld()->GetDeltaSeconds(), 0.6f);
+	AnalogAccLeft = FVector2D::ZeroVector;
 }
 
 void UBaseInputWidget::HandleGamepadAnalogRight2D(const FKey& Key, const float AnalogValue)
 {
-	FVector2D RightStickOffset = FVector2D();
 	if (Key == EKeys::Gamepad_RightX)
 	{
-		RightStickOffset.X = -AnalogValue * -1.f;
+		AnalogAccRight.X += -AnalogValue * -1.f;
 	}
 	
 	if (Key == EKeys::Gamepad_RightY)
 	{
-		RightStickOffset.Y = AnalogValue * -1.f;
+		AnalogAccRight.Y += AnalogValue * -1.f;
 	}
 
-	const float DeadZone = 0.02f;
-	if (FMath::Abs(RightStickOffset.X) < DeadZone && FMath::Abs(RightStickOffset.Y) < DeadZone)
+	PollAccumulatorRight += GetWorld()->GetDeltaSeconds();
+	if (PollAccumulatorRight < 0.066f)
 	{
-		RenderGamepadAnalogRight2D = FVector2D::ZeroVector;
 		return;
 	}
-	
-	float DeltaTime = GetWorld()->GetDeltaSeconds();
-	const float InterpSpeed = 80.0f; // Controla a velocidade da interpolação
-	FVector2D TargetValue = RenderGamepadAnalogRight2D; // Valor final que você quer atingir
-	FVector2D SmoothedValue = FMath::Vector2DInterpTo(RightStickOffset, TargetValue, DeltaTime, InterpSpeed);
-	RenderGamepadAnalogRight2D = SmoothedValue * 1.f;
+	PollAccumulatorRight = 0;
+	RenderGamepadAnalogRight2D = FMath::Vector2DInterpTo(AnalogAccRight, RenderGamepadAnalogRight2D, GetWorld()->GetDeltaSeconds(), 0.6f);
+	AnalogAccRight = FVector2D::ZeroVector;
 }
 
 bool UBaseInputWidget::GetGamepadPS_Menu()
@@ -198,6 +179,14 @@ bool UBaseInputWidget::GetGamepadRightTrigger() const
 	return RenderGamepadRightTrigger > 0.01f;
 }
 
+void UBaseInputWidget::SetConnectionType(int32 Connection)
+{
+	if (Connection < 0)
+	{
+		SetOpacity(0.0);
+	}
+	ConnectionType = Connection;
+}
 void UBaseInputWidget::SelectDevice(EDualSenseModel DeviceModel, float Opacity)
 {
 	FString* FoundString = Device.Find(DeviceModel);
@@ -234,15 +223,32 @@ void UBaseInputWidget::SelectDevice(EDualSenseModel DeviceModel, float Opacity)
 			UE_LOG(LogTemp, Warning, TEXT("Texture5 Failed to load texture: /PSOnScreenControllerOverlay/DS_Icons/DualSenseCosmicRed.DualSenseCosmicRed"));
 		}
 
-		UE_LOG(LogTemp, Log, TEXT("Device selecionado: %s"), **FoundString);
 		UTexture2D* Texture = FindObject<UTexture2D>(nullptr, **FoundString);
 		if (Texture)
 		{
-			UE_LOG(LogTemp, Log, TEXT("Textura carregada: %s"), **FoundString);
-
-
-			SetImage(Texture);
+			IsDualChock = false;
 			SetOpacity(Opacity);
+			SetImage(Texture);
+		}
+	}
+}
+
+void UBaseInputWidget::DualShockSpecialEdition(EDualShockModel DeviceModel, float Opacity)
+{
+	FString* FoundString = DualShock.Find(DeviceModel);
+	if (FoundString)
+	{
+		UTexture2D* TextureSpecialEdition = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, TEXT("/PSOnScreenControllerOverlay/DS4_Icons/DualShock_4_20th_Model_Thumbstick.DualShock_4_20th_Model_Thumbstick")));
+		if (!TextureSpecialEdition)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Texture Special Edition Failed to load texture: /PSOnScreenControllerOverlay/DS4_Icons/DualShock_4_20th_Model_Thumbstick.DualShock_4_20th_Model_Thumbstick"));
+		}
+		UTexture2D* Texture = FindObject<UTexture2D>(nullptr, **FoundString);
+		if (Texture)
+		{
+			IsDualChock = true;
+			SetOpacity(Opacity);
+			SetImage(Texture);
 		}
 	}
 }

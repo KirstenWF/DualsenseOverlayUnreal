@@ -20,6 +20,12 @@ enum class EDualSenseModel : uint8
 	GalacticPurple UMETA(DisplayName = "Galactic Purple")
 };
 
+UENUM(BlueprintType)
+enum class EDualShockModel : uint8
+{
+	DualShock4Anniversary UMETA(DisplayName = "(DualShock 4) 20th Anniversary Edition")
+};
+
 
 /**
  * 
@@ -30,11 +36,24 @@ class PSONSCREENCONTROLLEROVERLAY_API UBaseInputWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	float PollAccumulatorRight;
+	float PollAccumulatorLeft;
+	FVector2D AnalogAccRight;
+	FVector2D AnalogAccLeft;
 	UFUNCTION(BlueprintCallable, Category = "Game Events")
 	TMap<FName, bool> GetButtonStates()
 	{
 		return ButtonStates;
 	}
+
+	UFUNCTION(BlueprintCallable, Category = "Game Events")
+	void SetConnectionType(
+		UPARAM(DisplayName = "Connection Type (Disconnected = -1, Usb = 0, Bluetooth = 1)", meta = (UIMin = "0", UIMax = "1"))
+		int32 Connection = -1
+	);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Connection")
+	int32 ConnectionType;
 
 	UPROPERTY(VisibleAnywhere, BlueprintGetter = GetGamepadPS_Menu, Category = "Buttons")
 	bool bGamepadPS_Menu;
@@ -169,13 +188,23 @@ public:
 	bool GetGamepadRightTrigger() const;
 
 	UFUNCTION(BlueprintCallable, Category = "UI Device Select")
-	void SelectDevice(EDualSenseModel DeviceModel, float Opacity);
+	void SelectDevice(
+		EDualSenseModel DeviceModel,
+		UPARAM(DisplayName = "Opacity min: 0.0  max: 1.0", meta = (UIMin = "0.0", UIMax = "1.0"))
+		float Opacity
+	);
+
+	UFUNCTION(BlueprintCallable, Category = "UI Device Select")
+	void DualShockSpecialEdition(EDualShockModel DeviceModel, float Opacity);
 
 	UFUNCTION(BlueprintPure, Category = "UI Device Select")
 	UTexture2D* GetDeviceSelected();
 
 	UFUNCTION(BlueprintPure, Category = "UI Device Select")
 	float GetOpacity();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Device Model")
+	bool IsDualChock = false;
 	
 protected:
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -192,6 +221,11 @@ protected:
 		{ EDualSenseModel::StarlightBlue, TEXT("/PSOnScreenControllerOverlay/DS_Icons/DualSenseStarlightBlue.DualSenseStarlightBlue")  },
 		{ EDualSenseModel::NovaPink, TEXT("/PSOnScreenControllerOverlay/DS_Icons/DualSenseNovaPink.DualSenseNovaPink") },
 		{ EDualSenseModel::GalacticPurple, TEXT("/PSOnScreenControllerOverlay/DS_Icons/DualSenseGalacticPurple.DualSenseGalacticPurple") }
+	};
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TMap<EDualShockModel, FString> DualShock = {
+		{ EDualShockModel::DualShock4Anniversary, TEXT("/PSOnScreenControllerOverlay/DS4_Icons/DualShock_4_20th_Model_Thumbstick.DualShock_4_20th_Model_Thumbstick") }
 	};
 
 	float RenderGamepadLeftTrigger = 0.0f;
@@ -222,6 +256,8 @@ protected:
 
 	UPROPERTY()
 	float OpacityBrush;
+
+	
 
 
 	virtual FReply NativeOnKeyDown( const FGeometry& InGeometry, const FKeyEvent& InKeyEvent ) override;
